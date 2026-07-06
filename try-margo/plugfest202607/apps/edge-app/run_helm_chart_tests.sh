@@ -24,18 +24,39 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+echo "Running helm install --dry-run.."
 helm install my-release ./helm-chart --dry-run
 if [ $? -ne 0 ]; then
 	echo "Failed to run helm install --dry-run."
 	exit 1
 fi
 
+echo "Running helm install.."
 helm install my-release ./helm-chart
 if [ $? -ne 0 ]; then
 	echo "Failed to run helm install."
 	exit 1
 fi
 
-kubectl get pods -A
+sleep 10
+
+echo "Checking edge-app exists.."
+kubectl get pods -A | grep edge-app
+if [ $? -ne 0 ]; then
+	echo "Failed to check edge-app is running."
+	kubectl get pods -A
+	exit 1
+fi
+
+echo "Checking edge-app is ready.."
+kubectl wait --timeout=1m --for=condition=ready pod -l app=edge-app
+if [ $? -ne 0 ]; then
+	echo "Failed to check edge-app is ready."
+	echo "--- kubectl get pods ---------------------------------------------"
+	kubectl get pods
+	echo "--- kubectl describe pods ----------------------------------------"
+	kubectl describe pods
+	exit 1
+fi
 
 echo "Succeeded to run this script."
