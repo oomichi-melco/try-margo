@@ -1,0 +1,6 @@
+replicaCount: 1
+
+image:
+  repository: ghcr.io/oomichi-melco/edge-app
+  tag: "develop"
+  pullPolicy: IfNotPresent
