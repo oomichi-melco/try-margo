@@ -1,0 +1,20 @@
+name: Tests for pull requests
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-tests:
+    name: Run Build Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build edge-app container image
+        run: ./try-margo/plugfest202607/apps/edge-app/build_container_image.sh
+
+      - name: Run tests
+        run: ./try-margo/plugfest202607/apps/edge-app/run_tests.sh
