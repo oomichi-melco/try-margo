@@ -13,9 +13,6 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Run helm chart test
-        run: ./try-margo/plugfest202607/apps/edge-app/run_helm_chart_tests.sh
-
       - name: Build edge-app container image
         run: ./try-margo/plugfest202607/apps/edge-app/build_container_image.sh
 
@@ -46,3 +43,15 @@ jobs:
 
       - name: Push container images
         run: ./try-margo/plugfest202607/apps/push_container_images.sh
+
+  k3s-tests:
+    name: Test helm-chart on k3s
+    runs-on: ubuntu-latest
+    needs: push-images
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Run helm chart test
+        run: ./try-margo/plugfest202607/apps/edge-app/run_helm_chart_tests.sh
