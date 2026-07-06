@@ -18,3 +18,28 @@ jobs:
 
       - name: Run tests
         run: ./try-margo/plugfest202607/apps/edge-app/run_tests.sh
+
+  push-images:
+    name: Push Container Images
+    runs-on: ubuntu-latest
+    needs: build-tests
+    permissions:
+      # イメージをプッシュする権限をGITHUB_TOKENに付与する
+      contents: read
+      packages: write
+    env:
+      REGISTRY: ghcr.io
+      REGISTRY_TOKEN_NAME: ${{ github.actor }}
+      REGISTRY_TOKEN_PASSWD: ${{ secrets.GITHUB_TOKEN }}
+      IMAGE_TAG: develop
+      MULTI_ARCH_BUILD: true
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Build edge-app container image
+        run: ./try-margo/plugfest202607/apps/edge-app/build_container_image.sh
+
+      - name: Push container images
+        run: ./try-margo/plugfest202607/apps/push_container_images.sh
