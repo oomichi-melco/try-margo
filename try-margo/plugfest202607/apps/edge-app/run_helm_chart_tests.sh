@@ -11,10 +11,31 @@ if [ $? -eq 127 ]; then
 	sudo apt-get install helm
 fi
 
+export KUBECONFIG=/etc/rancher/k3s/k3s.yaml
+kubectl get nodes
+if [ $? -ne 0 ]; then
+	echo "Installing k3s.."
+	../../../tests/install_k3s.sh
+fi
+
 helm lint ./helm-chart/
 if [ $? -ne 0 ]; then
-	echo "Failed to run helm lint ."
+	echo "Failed to run helm lint."
 	exit 1
 fi
+
+helm install my-release ./helm-chart --dry-run
+if [ $? -ne 0 ]; then
+	echo "Failed to run helm install --dry-run."
+	exit 1
+fi
+
+helm install my-release ./helm-chart
+if [ $? -ne 0 ]; then
+	echo "Failed to run helm install."
+	exit 1
+fi
+
+kubectl get pods -A
 
 echo "Succeeded to run this script."
