@@ -13,7 +13,13 @@ fi
 
 helm lint ./helm-chart/
 if [ $? -ne 0 ]; then
-	echo "Failed to run helm lint ."
+	echo "Failed to run helm lint."
+	exit 1
+fi
+
+helm install my-release ./helm-chart --dry-run
+if [ $? -ne 0 ]; then
+	echo "Failed to run helm install --dry-run."
 	exit 1
 fi
 
