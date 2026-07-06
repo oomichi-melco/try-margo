@@ -1,0 +1,20 @@
+apiVersion: margo.org/v1-alpha1
+kind: ApplicationDescription
+id: oomichi-melco-edge-app
+metadata:
+  name: edge app
+  description: A basic edge app for plugfest
+  version: "1.0"
+  catalog:
+    organization:
+      - name: oomichi-melco
+        site: https://github.com/oomichi-melco
+deploymentProfiles:
+  - type: helm
+    id: oomichi-melco-edge-app-helm-a
+    components:
+      - name: edge-app
+        properties:  
+          repository: oci://ghcr.io/oomichi-melco/edge-app-chart
+          revision: 1.0.0
+          wait: true
