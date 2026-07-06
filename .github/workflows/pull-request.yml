@@ -47,6 +47,33 @@ jobs:
       - name: Push container images
         run: ./try-margo/plugfest202607/apps/push_container_images.sh
 
+  push-helm-chart:
+    name: Push helm chart
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0' # 任意のHelmバージョン
+
+      - name: Log in to GHCR
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      - name: Package and Push Helm Chart
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          helm package try-margo/plugfest202607/apps/edge-app/helm-chart
+          ls
+          helm push *.tgz oci://ghcr.io/$OWNER
+
   k3s-tests:
     name: Test helm-chart on k3s
     runs-on: ubuntu-latest
