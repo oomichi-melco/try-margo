@@ -21,11 +21,13 @@ echo \
   ${UBUNTU_CODENAME} stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 set +e
 
+RUNNER_IP=$(hostname -I | awk '{print $1}')
+
 echo "Adding entries for /etc/hosts.."
 grep symphony.machine /etc/hosts
 if [ $? -ne 0 ]; then
-	echo "127.0.0.1 symphony.machine" | sudo tee -a /etc/hosts > /dev/null
-	echo "127.0.0.1 harbor.machine" | sudo tee -a /etc/hosts > /dev/null
+	echo "${RUNNER_IP} symphony.machine" | sudo tee -a /etc/hosts > /dev/null
+	echo "${RUNNER_IP} harbor.machine" | sudo tee -a /etc/hosts > /dev/null
 fi
 
 cd scripts

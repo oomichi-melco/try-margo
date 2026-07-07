@@ -15,6 +15,8 @@ fi
 
 cd scripts
 
+RUNNER_IP=$(hostname -I | awk '{print $1}')
+
 echo "Install margo k3s client.."
 sudo -E bash device-agent.sh k3s install
 if [ $? -ne 0 ]; then
@@ -59,6 +61,7 @@ pwd
 cd ../..
 kubectl -n kube-system get configmap coredns -o yaml > ./coredns.yaml
 patch -p0 < ./nodehosts.patch
+sed -i s/"127.0.0.1"/"${RUNNER_IP}"/g ./coredns.yaml
 kubectl apply -f ./coredns.yaml
 kubectl -n kube-system rollout restart deployment coredns
 cd sandbox/scripts
@@ -72,14 +75,30 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+kubectl -n default get pods
+kubectl -n default wait --timeout=1m --for=condition=ready pod -l app=workload-fleet-management-client-pod
+if [ $? -ne 0 ]; then
+	echo "Failed to wait for the pod ready."
+	exit 1
+fi
+
+# this sleep is necessary for onboarding process.
+sleep 1m
+
+kubectl -n default get deployments
+kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Device onboarded"
+if [ $? -ne 0 ]; then
+	kubectl -n default logs deployment/workload-fleet-management-client-deploy
+	echo "Failed to get valid message for device onboarding process."
+	exit 1
+fi
+
 echo "Checking k3s agent status.."
 sudo -E bash device-agent.sh k3s status
 if [ $? -ne 0 ]; then
 	echo "Failed to check k3s agent status."
 	exit 1
 fi
-
-kubectl -n default get pods
 
 echo "Installing otel.."
 # Fix this later.
