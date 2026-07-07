@@ -5,6 +5,17 @@ on:
     branches: [main]
 
 jobs:
+  setup-margo-tests:
+    name: Setup margo Tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Setup margo sandbox
+        run: ./try-margo/margo-installer/setup_margo_sandobox.sh
+
   build-tests:
     name: Run Build Tests
     runs-on: ubuntu-latest
