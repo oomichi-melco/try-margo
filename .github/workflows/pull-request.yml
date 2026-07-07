@@ -33,6 +33,9 @@ jobs:
       - name: Run helm chart test
         run: ./try-margo/plugfest202607/apps/edge-app/run_helm_chart_tests.sh
 
+      - name: Run compose test
+        run: ./try-margo/plugfest202607/apps/edge-app/run_compose_tests.sh
+
       - name: Build edge-app container image
         run: ./try-margo/plugfest202607/apps/edge-app/build_container_image.sh
 
