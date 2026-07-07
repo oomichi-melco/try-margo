@@ -36,3 +36,28 @@ if [ $? -ne 0 ]; then
 	echo "Failed to setup margo."
 	exit 1
 fi
+
+echo "Start symphony.."
+sudo -E bash wfm.sh start
+if [ $? -ne 0 ]; then
+	echo "Failed to start symphony."
+	exit 1
+fi
+
+echo "Install observability_stack.."
+# TODO: Fix this later
+# sudo -E bash wfm.sh obs-install
+if [ $? -ne 0 ]; then
+	echo "Failed to install observability_stack."
+	exit 1
+fi
+
+sleep 10
+
+sudo docker logs symphony-api-container | grep 'evaluation context established'
+if [ $? -ne 0 ]; then
+	echo "Failed to check valid logs in symphony-api-container."
+	exit 1
+fi
+
+echo "Succeeded to run this script."
