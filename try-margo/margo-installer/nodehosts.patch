@@ -1,0 +1,11 @@
+--- coredns.yaml	2026-07-07 07:25:50.388000000 +0000
++++ coredns.yaml	2026-07-07 07:27:12.076000000 +0000
+@@ -10,6 +10,8 @@
+           fallthrough in-addr.arpa ip6.arpa
+         }
+         hosts /etc/coredns/NodeHosts {
++          127.0.0.1 harbor.machine
++          127.0.0.1 symphony.machine
+           ttl 60
+           reload 15s
+           fallthrough

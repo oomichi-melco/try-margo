@@ -45,7 +45,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Install observability_stack.."
-# TODO: Fix this later
+# Fix this later.
 # sudo -E bash wfm.sh obs-install
 if [ $? -ne 0 ]; then
 	echo "Failed to install observability_stack."
