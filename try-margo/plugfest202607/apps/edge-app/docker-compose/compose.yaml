@@ -1,0 +1,4 @@
+services:
+  main:
+    image: ghcr.io/oomichi-melco/edge-app:develop
+    container_name: melcoedgeapp
