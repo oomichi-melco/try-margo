@@ -15,6 +15,6 @@ deploymentProfiles:
     components:
       - name: edge-app
         properties:  
-          repository: oci://ghcr.io/oomichi-melco/edge-app-chart
+          repository: oci://harbor.machine:8443/library/edge-app-chart
           revision: 1.0.0
           wait: true
