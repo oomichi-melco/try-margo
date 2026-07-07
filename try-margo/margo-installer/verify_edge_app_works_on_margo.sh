@@ -11,19 +11,18 @@ if [ $? -ne 0 ]; then
 	sudo apt install -y podman
 fi
 
-echo "Pushing container image.."
+echo "Pushing container image to harbor.."
 set -ex
-podman logout ghcr.io
-podman pull ghcr.io/${CONTAINER_IMAGE}
-podman tag ghcr.io/${CONTAINER_IMAGE} harbor.machine:8443/${CONTAINER_IMAGE}
-podman login harbor.machine:8443 -u admin -p Harbor12345
-podman push harbor.machine:8443/${CONTAINER_IMAGE}
+docker pull ghcr.io/${CONTAINER_IMAGE}
+docker tag ghcr.io/${CONTAINER_IMAGE} harbor.machine:8443/${CONTAINER_IMAGE}
+docker login harbor.machine:8443 -u admin -p Harbor12345
+docker push harbor.machine:8443/${CONTAINER_IMAGE}
 set +x
 
 echo "Pushing helm chart.."
 set -ex
-podman pull ghcr.io/${HELM_IMAGE}
-podman save -o helm.tar ghcr.io/${HELM_IMAGE}
+docker pull ghcr.io/${HELM_IMAGE}
+docker save -o helm.tar ghcr.io/${HELM_IMAGE}
 helm push helm.tar oci://harbor.machine:8443/library
 
 echo "Succeeded to run this script."
