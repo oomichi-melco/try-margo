@@ -19,4 +19,10 @@ docker login harbor.machine:8443 -u admin -p Harbor12345
 docker push harbor.machine:8443/library/${CONTAINER_IMAGE}
 set +x
 
+echo "Pushing helm chart to harbor.."
+set -x
+cd ../plugfest202607/apps/edge-app/helm-chart/
+helm package .
+helm push edge-app-chart-1.0.0.tgz oci://harbor.machine:8443/library
+
 echo "Succeeded to run this script."
