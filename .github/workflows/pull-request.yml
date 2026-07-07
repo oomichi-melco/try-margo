@@ -19,6 +19,9 @@ jobs:
       - name: Setup margo sandbox client
         run: ./try-margo/margo-installer/setup_margo_sandobox_client.sh
 
+      - name: Verify margo sandbox
+        run: ./try-margo/margo-installer/verify_margo_sandbox.sh
+
   build-tests:
     name: Run Build Tests
     runs-on: ubuntu-latest
