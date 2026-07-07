@@ -23,7 +23,6 @@ echo "Pushing helm chart to harbor.."
 set -x
 cd ../plugfest202607/apps/edge-app/helm-chart/
 helm package .
-helm push edge-app-chart-1.0.0.tgz oci://harbor.machine:8443/library --plain-http
 helm push edge-app-chart-1.0.0.tgz oci://harbor.machine:8443/library
 
 echo "Succeeded to run this script."
