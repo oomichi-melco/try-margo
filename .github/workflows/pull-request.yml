@@ -13,8 +13,11 @@ jobs:
       - name: Check out code
         uses: actions/checkout@v4
 
-      - name: Setup margo sandbox
+      - name: Setup margo sandbox wfm
         run: ./try-margo/margo-installer/setup_margo_sandobox_wfm.sh
+
+      - name: Setup margo sandbox client
+        run: ./try-margo/margo-installer/setup_margo_sandobox_client.sh
 
   build-tests:
     name: Run Build Tests
