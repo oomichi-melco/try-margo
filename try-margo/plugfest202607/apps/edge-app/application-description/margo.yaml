@@ -24,9 +24,3 @@ deploymentProfiles:
       - name: edge-app-docker
         properties:
           packageLocation: https://raw.githubusercontent.com/oomichi-melco/try-margo/refs/heads/main/try-margo/plugfest202607/apps/edge-app/docker-compose/compose.yaml
-parameters:
-  greeting:
-    value: harbor.machine:8443/edge-app
-    targets:
-    - pointer: image.repository
-      components: ["edge-app"]
