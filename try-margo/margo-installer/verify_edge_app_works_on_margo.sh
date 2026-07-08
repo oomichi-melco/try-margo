@@ -67,12 +67,23 @@ if [ -z "${DEVICE_ID}" ]; then
 	exit 1
 fi
 
+# to make it stable
+sleep 10
+
 echo "Deploying application on edge.."
 sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${DEVICE_ID}
 if [ $? -ne 0 ]; then
 	echo "Failed to deploy application on edge."
 	exit 1
 fi
+
+# to make it stable
+sleep 10
+
+echo "Logs of symphony-api-container ----------------------------------------------------------"
+sudo docker logs symphony-api-container
+
+sleep 10
 
 echo "Checking deployment.."
 sudo -E bash wfm-cli.sh list-deployments

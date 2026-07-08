@@ -18,6 +18,12 @@ deploymentProfiles:
           repository: oci://harbor.machine:8443/library/edge-app-chart
           revision: 1.0.0
           wait: true
+  - type: compose
+    id: oomichi-melco-edge-app-compose-a
+    components:
+      - name: edge-app-docker
+        properties:
+          packageLocation: https://raw.githubusercontent.com/oomichi-melco/try-margo/refs/heads/main/try-margo/plugfest202607/apps/edge-app/docker-compose/compose.yaml
 parameters:
   greeting:
     value: harbor.machine:8443/edge-app
