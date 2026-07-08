@@ -60,12 +60,24 @@ if [ -z "${PACKAGE_ID}" ]; then
 	exit 1
 fi
 
-DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | awk -F'|' '{print $2}' | sed s/" "//g)
-if [ -z "${DEVICE_ID}" ]; then
-	echo "Failed to get DEVICE_ID."
-	sudo -E bash wfm-cli.sh list-devices | grep ONBOARD
+K3S_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep 'Standalone Cluster' | awk -F'|' '{print $2}' | sed s/" "//g)
+if [ -z "${K3S_DEVICE_ID}" ]; then
+	echo "Failed to get K3S_DEVICE_ID."
+	sudo -E bash wfm-cli.sh list-devices
 	exit 1
 fi
+
+DOCKER_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep 'Standalone Device' | awk -F'|' '{print $2}' | sed s/" "//g)
+if [ -z "${DOCKER_DEVICE_ID}" ]; then
+	echo "Failed to get DOCKER_DEVICE_ID."
+	sudo -E bash wfm-cli.sh list-devices
+	exit 1
+fi
+
+echo "K3S_DEVICE_ID   : ${K3S_DEVICE_ID}"
+echo "DOCKER_DEVICE_ID: ${DOCKER_DEVICE_ID}"
+
+DEVICE_ID=${DOCKER_DEVICE_ID}
 
 # to make it stable
 sleep 10

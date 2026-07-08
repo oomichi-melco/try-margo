@@ -31,24 +31,21 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-echo "Create Security Certificates of rsa.."
+echo "Create Security Certificates of rsa for k3s.."
 sudo -E bash device-agent.sh k3s create-rsa-certs
 if [ $? -ne 0 ]; then
 	echo "Failed to create Security Certificates of rsa."
 	exit 1
 fi
 
-echo "Create Security Certificates of ecdsa.."
+echo "Create Security Certificates of ecdsa for k3s.."
 sudo -E bash device-agent.sh k3s create-ecdsa-certs
 if [ $? -ne 0 ]; then
 	echo "Failed to create Security Certificates of ecdsa."
 	exit 1
 fi
 
-echo "Copy cert files to device client.."
-if [ ! -d ~/certs ]; then
-	mkdir ~/certs
-fi
+ls ~/certs
 
 set -ex
 sudo cp ~/symphony/api/certificates/ca-cert.pem ~/certs
@@ -75,6 +72,22 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+# NOTE: k3s-agent and compose-agent use the same cert files.
+# To avoid the same signature on api side, here generates cert files again after start-k3s.
+echo "Create Security Certificates of rsa for docker.."
+sudo -E bash device-agent.sh docker create-rsa-certs
+if [ $? -ne 0 ]; then
+	echo "Failed to create Security Certificates of rsa."
+	exit 1
+fi
+
+echo "Create Security Certificates of ecdsa for docker.."
+sudo -E bash device-agent.sh docker create-ecdsa-certs
+if [ $? -ne 0 ]; then
+	echo "Failed to create Security Certificates of ecdsa."
+	exit 1
+fi
+
 echo "Starting docker-compose agent.."
 sudo -E bash device-agent.sh docker start-docker
 if [ $? -ne 0 ]; then
@@ -97,7 +110,7 @@ kubectl -n default get deployments
 kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Device onboarded"
 if [ $? -ne 0 ]; then
 	kubectl -n default logs deployment/workload-fleet-management-client-deploy
-	echo "Failed to get valid message for device onboarding process."
+	echo "Failed to get valid message for k3s device onboarding process."
 	exit 1
 fi
 
@@ -108,7 +121,12 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-sudo docker logs -f workload-fleet-management-client
+echo "Checking logs of docker-compose agent.."
+sudo docker logs workload-fleet-management-client 2>&1 | grep 'Device onboarded'
+if [ $? -ne 0 ]; then
+	echo "Failed to get valid message for docker device onboarding process."
+	exit 1
+fi
 
 echo "Installing otel.."
 # Fix this later.
