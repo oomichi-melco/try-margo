@@ -93,7 +93,8 @@ jobs:
       - name: Package and Push Helm Chart
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          helm package try-margo/plugfest202607/apps/edge-app/helm-chart
+          cd try-margo/plugfest202607/apps/edge-app/helm-chart
+          helm package .
           ls
           helm push *.tgz oci://ghcr.io/$OWNER
 
