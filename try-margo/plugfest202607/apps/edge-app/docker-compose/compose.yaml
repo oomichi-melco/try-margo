@@ -1,4 +1,4 @@
 services:
   main:
-    image: ghcr.io/oomichi-melco/edge-app:develop
+    image: emregistry-mvs1.opep.cdm.se.com:5000/edge-app:develop
     container_name: melcoedgeapp

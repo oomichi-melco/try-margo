@@ -23,4 +23,4 @@ deploymentProfiles:
     components:
       - name: edge-app-docker
         properties:
-          packageLocation: https://raw.githubusercontent.com/oomichi-melco/try-margo/refs/heads/main/try-margo/plugfest202607/apps/edge-app/docker-compose/compose.yaml
+          packageLocation: http://emregistry-mvs1.opep.cdm.se.com:5000/compose.yaml
