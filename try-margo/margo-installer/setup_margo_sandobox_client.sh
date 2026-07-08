@@ -75,6 +75,13 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+echo "Starting docker-compose agent.."
+sudo -E bash device-agent.sh docker start-docker
+if [ $? -ne 0 ]; then
+	echo "Failed to start docker-compose agent."
+	exit 1
+fi
+
 kubectl -n default get pods
 kubectl -n default wait --timeout=1m --for=condition=ready pod -l app=workload-fleet-management-client-pod
 if [ $? -ne 0 ]; then
