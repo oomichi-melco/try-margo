@@ -92,6 +92,7 @@ fi
 # this sleep is necessary for onboarding process.
 sleep 1m
 
+echo "Checking k3s agent logs.."
 kubectl -n default get deployments
 kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Device onboarded"
 if [ $? -ne 0 ]; then
@@ -106,6 +107,8 @@ if [ $? -ne 0 ]; then
 	echo "Failed to check k3s agent status."
 	exit 1
 fi
+
+sudo docker logs -f workload-fleet-management-client
 
 echo "Installing otel.."
 # Fix this later.
