@@ -112,6 +112,15 @@ jobs:
           ls
           helm push *.tgz oci://ghcr.io/$OWNER
 
+      - name: Push compose.yaml
+        run: |
+          OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          cd try-margo/plugfest202607/apps/edge-app/docker-compose/
+          echo "${{ secrets.GITHUB_TOKEN }}" | oras login ghcr.io -u ${{ github.actor }} --password-stdin
+          oras push ghcr.io/$OWNER/compose-artifact:v1.0.0 \
+            --artifact-type application/vnd.example.compose \
+            compose.yaml:application/yaml
+
       - name: Push application package
         run: |
           OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
