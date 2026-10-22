@@ -5,6 +5,17 @@ on:
     branches: [main]
 
 jobs:
+  coding-style-tests:
+    name: Coding style Tests
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Check markdown style
+        run: ./try-margo/tests/run_markdownlint.sh
+
   setup-margo-tests:
     name: Setup margo Tests
     runs-on: ubuntu-24.04
