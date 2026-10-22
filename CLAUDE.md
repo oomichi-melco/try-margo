@@ -7,15 +7,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Margo is an open standard for edge interoperability in industrial automation, hosted under the Linux Foundation. It defines how edge applications, edge devices, and edge orchestration software interoperate, and provides a specification, a reference implementation, and a compliance testing toolkit.
 
 Official resources:
-- Website: https://margo.org/
-- Specification: https://specification.margo.org/
-- GitHub organization: https://github.com/margo (includes `margo/sandbox`, whose scripts `margo-installer/` uses)
+
+- Website: <https://margo.org/>
+- Specification: <https://specification.margo.org/>
+- GitHub organization: <https://github.com/margo> (includes `margo/sandbox`, whose scripts `margo-installer/` uses)
 
 ## Directory Structure
 
 This repository is a personal sandbox for trying and testing Margo. Note that the repository root contains a nested `try-margo/` directory, which holds all the actual content.
 
-```
+```text
 .
 ├── .github/workflows/pull-request.yml   # CI: the only workflow, runs on PRs to main
 └── try-margo/
