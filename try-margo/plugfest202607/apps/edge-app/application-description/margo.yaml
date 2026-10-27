@@ -23,4 +23,6 @@ deploymentProfiles:
     components:
       - name: edge-app-docker
         properties:
-          packageLocation: ghcr.io/oomichi-melco/compose-artifact:v1.0.0
+          repository: oci://ghcr.io/oomichi-melco/edge-app-compose-archive
+          revision: 1.0.0
+          wait: true
