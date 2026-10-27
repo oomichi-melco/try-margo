@@ -180,7 +180,7 @@ check_k3s_app() {
 }
 
 check_docker_app() {
-	sudo docker ps --filter name=melcoedgeapp --filter status=running | grep melcoedgeapp
+	sudo docker ps --filter ancestor=ghcr.io/oomichi-melco/edge-app:develop --filter status=running | grep edge-app
 }
 
 echo "Checking the app on the devices.."
@@ -195,7 +195,7 @@ if [ $? -ne 0 ]; then
 fi
 retry_check check_docker_app
 if [ $? -ne 0 ]; then
-	echo "No running melcoedgeapp container on the docker device."
+	echo "No running edge-app container on the docker device."
 	sudo docker ps -a
 	sudo docker logs workload-fleet-management-client
 	RESULT=1
