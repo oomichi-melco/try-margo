@@ -25,8 +25,13 @@ function push_image() {
 
 	set -e
 	echo "Pushing the image ${IMAGE_NAME}:${IMAGE_TAG}.."
-	podman tag localhost/${IMAGE_NAME}:latest ${NEW_REGISTRY_IMAGE}
-	podman push ${NEW_REGISTRY_IMAGE}
+	if podman manifest exists localhost/${IMAGE_NAME}:latest; then
+		# Multi-arch build: "podman push" pushes only one architecture of the manifest list.
+		podman manifest push --all localhost/${IMAGE_NAME}:latest docker://${NEW_REGISTRY_IMAGE}
+	else
+		podman tag localhost/${IMAGE_NAME}:latest ${NEW_REGISTRY_IMAGE}
+		podman push ${NEW_REGISTRY_IMAGE}
+	fi
 	set +e
 }
 
