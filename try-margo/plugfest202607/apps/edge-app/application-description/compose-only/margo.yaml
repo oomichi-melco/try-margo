@@ -3,7 +3,7 @@ id: oomichi-melco-edge-app-compose
 metadata:
   name: edge app compose
   description: A basic edge app for plugfest (compose only)
-  version: "1.0"
+  version: "1.0.0"
   catalog:
     organization:
       - name: oomichi-melco
