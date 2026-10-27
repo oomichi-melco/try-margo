@@ -3,7 +3,7 @@ id: oomichi-melco-edge-app
 metadata:
   name: edge app
   description: A basic edge app for plugfest
-  version: "1.0"
+  version: "1.0.0"
   catalog:
     organization:
       - name: oomichi-melco
