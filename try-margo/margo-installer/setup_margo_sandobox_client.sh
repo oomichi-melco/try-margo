@@ -67,9 +67,10 @@ fi
 
 echo "Place SPIFFE ID allowlists of the WFM.."
 set -ex
-mkdir -p ~/sandbox/docker-compose/config ~/sandbox/helmchart/authorized
-echo "[\"${WFM_SPIFFE_ID}\"]" > ~/sandbox/helmchart/authorized/authorized.json
-echo "[\"${WFM_SPIFFE_ID}\"]" > ~/sandbox/docker-compose/config/authorized.json
+# ~/sandbox/helmchart/authorized is created by root in device-agent.sh install.
+sudo mkdir -p ~/sandbox/docker-compose/config ~/sandbox/helmchart/authorized
+echo "[\"${WFM_SPIFFE_ID}\"]" | sudo tee ~/sandbox/helmchart/authorized/authorized.json > /dev/null
+echo "[\"${WFM_SPIFFE_ID}\"]" | sudo tee ~/sandbox/docker-compose/config/authorized.json > /dev/null
 set +ex
 
 echo "Changing coredns file.."
