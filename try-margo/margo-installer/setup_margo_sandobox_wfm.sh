@@ -41,6 +41,48 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+# Since margo/sandbox switched to MIS (Margo Identity Service) based authentication,
+# symphony requires a WFM SVID, the MIS HTTPS CA and a non-empty SPIFFE ID allowlist.
+TRUST_DOMAIN=margo.org
+WFM_SPIFFE_ID="spiffe://${TRUST_DOMAIN}/margo/wfm/sandbox-wfm"
+WFM_CLIENT_SPIFFE_ID="${WFM_SPIFFE_ID}/client/sandbox-client"
+
+echo "Adding entries for /etc/hosts.."
+grep mis.${TRUST_DOMAIN} /etc/hosts
+if [ $? -ne 0 ]; then
+	echo "${RUNNER_IP} mis.${TRUST_DOMAIN}" | sudo tee -a /etc/hosts > /dev/null
+fi
+
+# CI=false makes mis.sh use the ghcr image instead of a locally built one.
+echo "Setup MIS root CAs.."
+CI=false sudo -E bash mis.sh setup-factory
+if [ $? -ne 0 ]; then
+	echo "Failed to setup MIS root CAs."
+	exit 1
+fi
+
+echo "Start MIS.."
+CI=false sudo -E bash mis.sh mis-install
+if [ $? -ne 0 ]; then
+	echo "Failed to start MIS."
+	exit 1
+fi
+
+echo "Generate WFM SVID.."
+sudo -E bash lib/mis/svid-gen.sh --automated --principal wfm --spiffe-id "${WFM_SPIFFE_ID}"
+if [ $? -ne 0 ]; then
+	echo "Failed to generate WFM SVID."
+	exit 1
+fi
+
+echo "Place WFM SVID, MIS CA and SPIFFE ID allowlist.."
+set -ex
+ls -l x509svid-wfm
+sudo cp x509svid-wfm/* ~/symphony/api/certificates/
+sudo cp ~/mis-deployment/certs/https-ca.crt ~/symphony/api/mis/https-ca.crt
+echo "[\"${WFM_CLIENT_SPIFFE_ID}\"]" | sudo tee ~/symphony/api/mis/authorized-clients.json > /dev/null
+set +ex
+
 echo "Start symphony.."
 sudo -E bash wfm.sh start
 if [ $? -ne 0 ]; then
