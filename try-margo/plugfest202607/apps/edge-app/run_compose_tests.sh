@@ -34,4 +34,25 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
+echo "Checking the published port and the health status.."
+HOST_PORT=$(docker compose port main 8080 | awk -F: '{print $NF}')
+curl -sf "http://localhost:${HOST_PORT}/"
+if [ $? -ne 0 ]; then
+	echo "Failed to get the status from the published port ${HOST_PORT}."
+	docker compose logs
+	exit 1
+fi
+echo
+for i in $(seq 1 12); do
+	docker compose ps | grep -q "(healthy)" && break
+	sleep 5
+done
+docker compose ps | grep -q "(healthy)"
+if [ $? -ne 0 ]; then
+	echo "The container did not become healthy."
+	docker compose ps
+	docker compose logs
+	exit 1
+fi
+
 echo "Succeeded to run this script."

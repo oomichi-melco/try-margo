@@ -1,3 +1,13 @@
 services:
   main:
     image: ghcr.io/oomichi-melco/edge-app:develop
+    ports:
+      # Only the container port is given so that Docker picks a free host port,
+      # which keeps more than one instance per device possible.
+      - "8080"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8080/', timeout=3)"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
