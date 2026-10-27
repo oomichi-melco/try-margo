@@ -45,7 +45,7 @@ fi
 # symphony requires a WFM SVID, the MIS HTTPS CA and a non-empty SPIFFE ID allowlist.
 TRUST_DOMAIN=margo.org
 WFM_SPIFFE_ID="spiffe://${TRUST_DOMAIN}/margo/wfm/sandbox-wfm"
-WFM_CLIENT_SPIFFE_ID="${WFM_SPIFFE_ID}/client/sandbox-client"
+WFM_CLIENT_SPIFFE_IDS="\"${WFM_SPIFFE_ID}/client/sandbox-client-k3s\",\"${WFM_SPIFFE_ID}/client/sandbox-client-docker\""
 
 echo "Adding entries for /etc/hosts.."
 grep mis.${TRUST_DOMAIN} /etc/hosts
@@ -80,7 +80,7 @@ set -ex
 ls -l x509svid-wfm
 sudo cp x509svid-wfm/* ~/symphony/api/certificates/
 sudo cp ~/mis-deployment/certs/https-ca.crt ~/symphony/api/mis/https-ca.crt
-echo "[\"${WFM_CLIENT_SPIFFE_ID}\"]" | sudo tee ~/symphony/api/mis/authorized-clients.json > /dev/null
+echo "[${WFM_CLIENT_SPIFFE_IDS}]" | sudo tee ~/symphony/api/mis/authorized-clients.json > /dev/null
 set +ex
 
 echo "Start symphony.."
