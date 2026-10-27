@@ -2,13 +2,11 @@
 
 cd $(dirname "$0")
 
-# Pin margo/sandbox so that upstream changes do not break CI unexpectedly.
-
 git clone --filter=blob:none --sparse https://github.com/margo/sandbox.git
 cd sandbox
 git sparse-checkout init --no-cone
 git sparse-checkout set scripts/*
-git checkout "${SANDBOX_COMMIT:-a8b4ac90d88991c5842a418960827ff3287b9bce}"
+git checkout main
 
 echo "Installing necessary packages.."
 UBUNTU_CODENAME=noble
