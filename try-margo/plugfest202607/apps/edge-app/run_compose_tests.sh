@@ -30,7 +30,7 @@ docker ps | grep Up
 if [ $? -ne 0 ]; then
 	echo "Failed to get valid status container."
 	docker ps -a
-	docker logs melcoedgeapp
+	docker compose logs
 	exit 1
 fi
 
