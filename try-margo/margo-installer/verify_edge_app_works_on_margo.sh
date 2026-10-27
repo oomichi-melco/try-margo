@@ -34,17 +34,25 @@ cd ../plugfest202607/apps/edge-app/application-description/
 oras push harbor.machine:8443/library/edge-app-helm-app-package:latest \
   --artifact-type "application/vnd.margo.app.v1+json" \
   margo.yaml:application/vnd.margo.app.description.v1+yaml
+# wfm-cli.sh picks the deployment profile from the first one of the package,
+# so a package having only the compose profile is needed for the docker device.
+cd compose-only
+oras push harbor.machine:8443/library/edge-app-compose-app-package:latest \
+  --artifact-type "application/vnd.margo.app.v1+json" \
+  margo.yaml:application/vnd.margo.app.description.v1+yaml
 set +ex
 cd ~-
 
 cd sandbox/scripts
 
-echo "Uploading application package.."
-sudo -E bash wfm-cli.sh upload-app-non-interactive edge-app-helm-app-package
-if [ $? -ne 0 ]; then
-	echo "Failed to upload application package for edge-app-helm-app-package."
-	exit 1
-fi
+echo "Uploading application packages.."
+for PACKAGE in edge-app-helm-app-package edge-app-compose-app-package; do
+	sudo -E bash wfm-cli.sh upload-app-non-interactive ${PACKAGE}
+	if [ $? -ne 0 ]; then
+		echo "Failed to upload application package for ${PACKAGE}."
+		exit 1
+	fi
+done
 
 echo "Checking application packages.."
 sudo -E bash wfm-cli.sh list-packages | grep ONBOARD
@@ -53,12 +61,22 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-PACKAGE_ID=$(sudo -E bash wfm-cli.sh list-packages | grep ONBOARD | awk -F'|' '{print $2}' | sed s/" "//g)
-if [ -z "${PACKAGE_ID}" ]; then
-	echo "Failed to get PACKAGE_ID."
-	sudo -E bash wfm-cli.sh list-packages | grep ONBOARD
+HELM_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name "edge app" | tail -1)
+if [ -z "${HELM_PACKAGE_ID}" ]; then
+	echo "Failed to get HELM_PACKAGE_ID."
+	sudo -E bash wfm-cli.sh list-packages
 	exit 1
 fi
+
+COMPOSE_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name "edge app compose" | tail -1)
+if [ -z "${COMPOSE_PACKAGE_ID}" ]; then
+	echo "Failed to get COMPOSE_PACKAGE_ID."
+	sudo -E bash wfm-cli.sh list-packages
+	exit 1
+fi
+
+echo "HELM_PACKAGE_ID   : ${HELM_PACKAGE_ID}"
+echo "COMPOSE_PACKAGE_ID: ${COMPOSE_PACKAGE_ID}"
 
 # Devices are identified by the SPIFFE ID now, so tell them apart by DEPLOYMENT TYPE.
 K3S_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep -w helm | awk -F'|' '{print $2}' | sed s/" "//g)
@@ -107,14 +125,14 @@ wait_deployment_running() {
 sleep 10
 
 echo "Deploying application on edge (k3s).."
-sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${K3S_DEVICE_ID}
+sudo -E bash wfm-cli.sh deploy-non-interactive ${HELM_PACKAGE_ID} ${K3S_DEVICE_ID}
 if [ $? -ne 0 ]; then
 	echo "Failed to deploy application on k3s device."
 	exit 1
 fi
 
 echo "Deploying application on edge (docker).."
-sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${DOCKER_DEVICE_ID}
+sudo -E bash wfm-cli.sh deploy-non-interactive ${COMPOSE_PACKAGE_ID} ${DOCKER_DEVICE_ID}
 if [ $? -ne 0 ]; then
 	echo "Failed to deploy application on docker device."
 	exit 1
@@ -136,17 +154,39 @@ fi
 echo "Checking deployment.."
 sudo -E bash wfm-cli.sh list-deployments
 
+# Retry the given command a few times as the app takes a while to start.
+retry_check() {
+	local i
+	for i in $(seq 1 6); do
+		"$@" && return 0
+		sleep 10
+	done
+	return 1
+}
+
+check_k3s_app() {
+	kubectl get pods -A | grep edge-app | grep Running
+}
+
+check_docker_app() {
+	sudo docker ps --filter name=melcoedgeapp --filter status=running | grep melcoedgeapp
+}
+
 echo "Checking the app on the devices.."
-kubectl get pods -A | grep edge-app | grep Running
+retry_check check_k3s_app
 if [ $? -ne 0 ]; then
 	echo "No running edge-app pod on the k3s device."
 	kubectl get pods -A
+	kubectl describe pods -l app=edge-app
+	kubectl logs -l app=edge-app --all-containers --previous
+	kubectl logs -l app=edge-app --all-containers
 	RESULT=1
 fi
-sudo docker ps --filter name=melcoedgeapp --filter status=running | grep melcoedgeapp
+retry_check check_docker_app
 if [ $? -ne 0 ]; then
 	echo "No running melcoedgeapp container on the docker device."
 	sudo docker ps -a
+	sudo docker logs workload-fleet-management-client
 	RESULT=1
 fi
 
