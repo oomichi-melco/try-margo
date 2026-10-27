@@ -60,16 +60,16 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-HELM_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name "edge app" | tail -1)
-if [ -z "${HELM_PACKAGE_ID}" ]; then
-	echo "Failed to get HELM_PACKAGE_ID."
+HELM_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name edge-app-helm-app-package | tail -1)
+if ! echo "${HELM_PACKAGE_ID}" | grep -qE "^[0-9a-f-]{36}$"; then
+	echo "Failed to get HELM_PACKAGE_ID: ${HELM_PACKAGE_ID}"
 	sudo -E bash wfm-cli.sh list-packages
 	exit 1
 fi
 
-COMPOSE_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name "edge app compose" | tail -1)
-if [ -z "${COMPOSE_PACKAGE_ID}" ]; then
-	echo "Failed to get COMPOSE_PACKAGE_ID."
+COMPOSE_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name edge-app-compose-app-package | tail -1)
+if ! echo "${COMPOSE_PACKAGE_ID}" | grep -qE "^[0-9a-f-]{36}$"; then
+	echo "Failed to get COMPOSE_PACKAGE_ID: ${COMPOSE_PACKAGE_ID}"
 	sudo -E bash wfm-cli.sh list-packages
 	exit 1
 fi
