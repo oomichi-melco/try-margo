@@ -78,28 +78,84 @@ fi
 echo "K3S_DEVICE_ID   : ${K3S_DEVICE_ID}"
 echo "DOCKER_DEVICE_ID: ${DOCKER_DEVICE_ID}"
 
-DEVICE_ID=${DOCKER_DEVICE_ID}
+# Wait until the deployment on the device ends up in a terminal state.
+# $1: label of the device (for messages), $2: the last part of the device ID
+wait_deployment_running() {
+	local label=$1
+	local device_suffix=$2
+	local state
+	local i
+
+	for i in $(seq 1 30); do
+		# columns: | ID | NAME | PKG | DEVICE | OP | RUNNINGSTATE | UPDATED |
+		state=$(sudo -E bash wfm-cli.sh list-deployments | grep "${device_suffix}" | awk -F'|' '{print $7}' | sed s/" "//g)
+		echo "[${i}/30] ${label} deployment state: ${state:-(not found)}"
+		case "${state}" in
+		INSTALLED|RUNNING)
+			return 0
+			;;
+		FAILED)
+			return 1
+			;;
+		esac
+		sleep 10
+	done
+	return 1
+}
 
 # to make it stable
 sleep 10
 
-echo "Deploying application on edge.."
-sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${DEVICE_ID}
+echo "Deploying application on edge (k3s).."
+sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${K3S_DEVICE_ID}
 if [ $? -ne 0 ]; then
-	echo "Failed to deploy application on edge."
+	echo "Failed to deploy application on k3s device."
 	exit 1
 fi
 
-# to make it stable
-sleep 10
+echo "Deploying application on edge (docker).."
+sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${DOCKER_DEVICE_ID}
+if [ $? -ne 0 ]; then
+	echo "Failed to deploy application on docker device."
+	exit 1
+fi
 
-echo "Logs of symphony-api-container ----------------------------------------------------------"
-sudo docker logs symphony-api-container
-
-sleep 10
+echo "Waiting for deployments to be running.."
+RESULT=0
+wait_deployment_running k3s "${K3S_DEVICE_ID##*/}"
+if [ $? -ne 0 ]; then
+	echo "The deployment on the k3s device did not get running."
+	RESULT=1
+fi
+wait_deployment_running docker "${DOCKER_DEVICE_ID##*/}"
+if [ $? -ne 0 ]; then
+	echo "The deployment on the docker device did not get running."
+	RESULT=1
+fi
 
 echo "Checking deployment.."
 sudo -E bash wfm-cli.sh list-deployments
+
+echo "Checking the app on the devices.."
+kubectl get pods -A | grep edge-app | grep Running
+if [ $? -ne 0 ]; then
+	echo "No running edge-app pod on the k3s device."
+	kubectl get pods -A
+	RESULT=1
+fi
+sudo docker ps --filter name=melcoedgeapp --filter status=running | grep melcoedgeapp
+if [ $? -ne 0 ]; then
+	echo "No running melcoedgeapp container on the docker device."
+	sudo docker ps -a
+	RESULT=1
+fi
+
+if [ ${RESULT} -ne 0 ]; then
+	echo "Logs of symphony-api-container ----------------------------------------------------------"
+	sudo docker logs symphony-api-container
+	echo "Failed to verify that edge-app is running."
+	exit 1
+fi
 
 cd ~-
 
