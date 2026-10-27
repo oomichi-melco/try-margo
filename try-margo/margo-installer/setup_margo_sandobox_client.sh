@@ -17,6 +17,40 @@ cd scripts
 
 RUNNER_IP=$(hostname -I | awk '{print $1}')
 
+# device-agent.sh install requires ~/certs to hold the MIS CA, the harbor cert and
+# an SVID (identity) of the WFM client for each device type.
+TRUST_DOMAIN=margo.org
+WFM_SPIFFE_ID="spiffe://${TRUST_DOMAIN}/margo/wfm/sandbox-wfm"
+
+generate_client_svid() {
+	local identity_dir=$1
+	local client_id=$2
+
+	sudo -E bash lib/mis/svid-gen.sh --automated --principal wfm-client \
+		--spiffe-id "${WFM_SPIFFE_ID}/client/${client_id}" || return 1
+	mkdir -p ~/certs/${identity_dir}
+	sudo cp x509svid-wfmclient/payload-cert.pem x509svid-wfmclient/payload-key.pem ~/certs/${identity_dir}/
+	sudo chown -R $(id -u):$(id -g) ~/certs/${identity_dir}
+}
+
+echo "Prepare certificates for margo client.."
+mkdir -p ~/certs
+# ~/mis-deployment/certs is created by root and not readable by the runner user.
+sudo cp ~/mis-deployment/certs/https-ca.crt ~/certs/
+sudo cp ~/sandbox/scripts/harbor/certs/harbor.crt ~/certs/
+sudo chown $(id -u):$(id -g) ~/certs/https-ca.crt ~/certs/harbor.crt
+generate_client_svid helm-identity sandbox-client-k3s
+if [ $? -ne 0 ]; then
+	echo "Failed to generate SVID for k3s client."
+	exit 1
+fi
+generate_client_svid compose-identity sandbox-client-docker
+if [ $? -ne 0 ]; then
+	echo "Failed to generate SVID for docker client."
+	exit 1
+fi
+ls -R ~/certs
+
 echo "Install margo k3s client.."
 sudo -E bash device-agent.sh k3s install
 if [ $? -ne 0 ]; then
@@ -31,25 +65,12 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-echo "Create Security Certificates of rsa for k3s.."
-sudo -E bash device-agent.sh k3s create-rsa-certs
-if [ $? -ne 0 ]; then
-	echo "Failed to create Security Certificates of rsa."
-	exit 1
-fi
-
-echo "Create Security Certificates of ecdsa for k3s.."
-sudo -E bash device-agent.sh k3s create-ecdsa-certs
-if [ $? -ne 0 ]; then
-	echo "Failed to create Security Certificates of ecdsa."
-	exit 1
-fi
-
-ls ~/certs
-
+echo "Place SPIFFE ID allowlists of the WFM.."
 set -ex
-sudo cp ~/symphony/api/certificates/ca-cert.pem ~/certs
-sudo cp ~/sandbox/scripts/harbor/certs/harbor.crt ~/certs
+# ~/sandbox/helmchart/authorized is created by root in device-agent.sh install.
+sudo mkdir -p ~/sandbox/docker-compose/config ~/sandbox/helmchart/authorized
+echo "[\"${WFM_SPIFFE_ID}\"]" | sudo tee ~/sandbox/helmchart/authorized/authorized.json > /dev/null
+echo "[\"${WFM_SPIFFE_ID}\"]" | sudo tee ~/sandbox/docker-compose/config/authorized.json > /dev/null
 set +ex
 
 echo "Changing coredns file.."
@@ -72,19 +93,10 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-# NOTE: k3s-agent and compose-agent use the same cert files.
-# To avoid the same signature on api side, here generates cert files again after start-k3s.
-echo "Create Security Certificates of rsa for docker.."
-sudo -E bash device-agent.sh docker create-rsa-certs
+echo "Install margo docker client.."
+sudo -E bash device-agent.sh docker install
 if [ $? -ne 0 ]; then
-	echo "Failed to create Security Certificates of rsa."
-	exit 1
-fi
-
-echo "Create Security Certificates of ecdsa for docker.."
-sudo -E bash device-agent.sh docker create-ecdsa-certs
-if [ $? -ne 0 ]; then
-	echo "Failed to create Security Certificates of ecdsa."
+	echo "Failed to install margo docker client."
 	exit 1
 fi
 
@@ -103,11 +115,12 @@ if [ $? -ne 0 ]; then
 fi
 
 # this sleep is necessary for onboarding process.
+# The agent no longer logs "Device onboarded"; "Capabilities reported successfully" marks the onboarding.
 sleep 1m
 
 echo "Checking k3s agent logs.."
 kubectl -n default get deployments
-kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Device onboarded"
+kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Capabilities reported successfully"
 if [ $? -ne 0 ]; then
 	kubectl -n default logs deployment/workload-fleet-management-client-deploy
 	echo "Failed to get valid message for k3s device onboarding process."
@@ -122,7 +135,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Checking logs of docker-compose agent.."
-sudo docker logs workload-fleet-management-client 2>&1 | grep 'Device onboarded'
+sudo docker logs workload-fleet-management-client 2>&1 | grep "Capabilities reported successfully"
 if [ $? -ne 0 ]; then
 	echo "Failed to get valid message for docker device onboarding process."
 	exit 1

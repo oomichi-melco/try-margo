@@ -60,14 +60,15 @@ if [ -z "${PACKAGE_ID}" ]; then
 	exit 1
 fi
 
-K3S_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep 'Standalone Cluster' | awk -F'|' '{print $2}' | sed s/" "//g)
+# Devices are identified by the SPIFFE ID now, so tell them apart by DEPLOYMENT TYPE.
+K3S_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep -w helm | awk -F'|' '{print $2}' | sed s/" "//g)
 if [ -z "${K3S_DEVICE_ID}" ]; then
 	echo "Failed to get K3S_DEVICE_ID."
 	sudo -E bash wfm-cli.sh list-devices
 	exit 1
 fi
 
-DOCKER_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep 'Standalone Device' | awk -F'|' '{print $2}' | sed s/" "//g)
+DOCKER_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep -w compose | awk -F'|' '{print $2}' | sed s/" "//g)
 if [ -z "${DOCKER_DEVICE_ID}" ]; then
 	echo "Failed to get DOCKER_DEVICE_ID."
 	sudo -E bash wfm-cli.sh list-devices
