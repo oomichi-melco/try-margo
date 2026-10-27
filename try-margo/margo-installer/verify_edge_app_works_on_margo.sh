@@ -30,21 +30,40 @@ cd ~-
 echo "Pushing application package to harbor.."
 set -x
 echo "Harbor12345" | oras login harbor.machine:8443   -u admin --password-stdin
+
+# The compose component is an archive having exactly one top level directory
+# named after the component, which is pushed with the Margo media types.
+STAGING_DIR=$(mktemp -d)
+mkdir ${STAGING_DIR}/edge-app-docker
+cp ../plugfest202607/apps/edge-app/docker-compose/compose.yaml ${STAGING_DIR}/edge-app-docker/
+tar -czf ${STAGING_DIR}/edge-app-compose-archive-1.0.0.tar.gz -C ${STAGING_DIR} edge-app-docker
+(cd ${STAGING_DIR} && oras push harbor.machine:8443/library/edge-app-compose-archive:1.0.0 \
+  --artifact-type "application/vnd.org.margo.component.compose+json" \
+  edge-app-compose-archive-1.0.0.tar.gz:application/vnd.org.margo.component.compose.tar+gzip)
+rm -rf ${STAGING_DIR}
+
 cd ../plugfest202607/apps/edge-app/application-description/
 oras push harbor.machine:8443/library/edge-app-helm-app-package:latest \
   --artifact-type "application/vnd.margo.app.v1+json" \
   margo.yaml:application/vnd.margo.app.description.v1+yaml
+# wfm-cli.sh picks the deployment profile from the first one of the package,
+# so a package having only the compose profile is needed for the docker device.
+(cd compose-only && oras push harbor.machine:8443/library/edge-app-compose-app-package:latest \
+  --artifact-type "application/vnd.margo.app.v1+json" \
+  margo.yaml:application/vnd.margo.app.description.v1+yaml)
 set +ex
 cd ~-
 
 cd sandbox/scripts
 
-echo "Uploading application package.."
-sudo -E bash wfm-cli.sh upload-app-non-interactive edge-app-helm-app-package
-if [ $? -ne 0 ]; then
-	echo "Failed to upload application package for edge-app-helm-app-package."
-	exit 1
-fi
+echo "Uploading application packages.."
+for PACKAGE in edge-app-helm-app-package edge-app-compose-app-package; do
+	sudo -E bash wfm-cli.sh upload-app-non-interactive ${PACKAGE}
+	if [ $? -ne 0 ]; then
+		echo "Failed to upload application package for ${PACKAGE}."
+		exit 1
+	fi
+done
 
 echo "Checking application packages.."
 sudo -E bash wfm-cli.sh list-packages | grep ONBOARD
@@ -53,12 +72,22 @@ if [ $? -ne 0 ]; then
 	exit 1
 fi
 
-PACKAGE_ID=$(sudo -E bash wfm-cli.sh list-packages | grep ONBOARD | awk -F'|' '{print $2}' | sed s/" "//g)
-if [ -z "${PACKAGE_ID}" ]; then
-	echo "Failed to get PACKAGE_ID."
-	sudo -E bash wfm-cli.sh list-packages | grep ONBOARD
+HELM_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name edge-app-helm-app-package | tail -1)
+if ! echo "${HELM_PACKAGE_ID}" | grep -qE "^[0-9a-f-]{36}$"; then
+	echo "Failed to get HELM_PACKAGE_ID: ${HELM_PACKAGE_ID}"
+	sudo -E bash wfm-cli.sh list-packages
 	exit 1
 fi
+
+COMPOSE_PACKAGE_ID=$(sudo -E bash wfm-cli.sh get-package-id-by-name edge-app-compose-app-package | tail -1)
+if ! echo "${COMPOSE_PACKAGE_ID}" | grep -qE "^[0-9a-f-]{36}$"; then
+	echo "Failed to get COMPOSE_PACKAGE_ID: ${COMPOSE_PACKAGE_ID}"
+	sudo -E bash wfm-cli.sh list-packages
+	exit 1
+fi
+
+echo "HELM_PACKAGE_ID   : ${HELM_PACKAGE_ID}"
+echo "COMPOSE_PACKAGE_ID: ${COMPOSE_PACKAGE_ID}"
 
 # Devices are identified by the SPIFFE ID now, so tell them apart by DEPLOYMENT TYPE.
 K3S_DEVICE_ID=$(sudo -E bash wfm-cli.sh list-devices | grep ONBOARD | grep -w helm | awk -F'|' '{print $2}' | sed s/" "//g)
@@ -78,28 +107,106 @@ fi
 echo "K3S_DEVICE_ID   : ${K3S_DEVICE_ID}"
 echo "DOCKER_DEVICE_ID: ${DOCKER_DEVICE_ID}"
 
-DEVICE_ID=${DOCKER_DEVICE_ID}
+# Wait until the deployment on the device ends up in a terminal state.
+# $1: label of the device (for messages), $2: the last part of the device ID
+wait_deployment_running() {
+	local label=$1
+	local device_suffix=$2
+	local state
+	local i
+
+	for i in $(seq 1 30); do
+		# columns: | ID | NAME | PKG | DEVICE | OP | RUNNINGSTATE | UPDATED |
+		state=$(sudo -E bash wfm-cli.sh list-deployments | grep "${device_suffix}" | awk -F'|' '{print $7}' | sed s/" "//g)
+		echo "[${i}/30] ${label} deployment state: ${state:-(not found)}"
+		case "${state}" in
+		INSTALLED|RUNNING)
+			return 0
+			;;
+		FAILED)
+			return 1
+			;;
+		esac
+		sleep 10
+	done
+	return 1
+}
 
 # to make it stable
 sleep 10
 
-echo "Deploying application on edge.."
-sudo -E bash wfm-cli.sh deploy-non-interactive ${PACKAGE_ID} ${DEVICE_ID}
+echo "Deploying application on edge (k3s).."
+sudo -E bash wfm-cli.sh deploy-non-interactive ${HELM_PACKAGE_ID} ${K3S_DEVICE_ID}
 if [ $? -ne 0 ]; then
-	echo "Failed to deploy application on edge."
+	echo "Failed to deploy application on k3s device."
 	exit 1
 fi
 
-# to make it stable
-sleep 10
+echo "Deploying application on edge (docker).."
+sudo -E bash wfm-cli.sh deploy-non-interactive ${COMPOSE_PACKAGE_ID} ${DOCKER_DEVICE_ID}
+if [ $? -ne 0 ]; then
+	echo "Failed to deploy application on docker device."
+	exit 1
+fi
 
-echo "Logs of symphony-api-container ----------------------------------------------------------"
-sudo docker logs symphony-api-container
-
-sleep 10
+echo "Waiting for deployments to be running.."
+RESULT=0
+wait_deployment_running k3s "${K3S_DEVICE_ID##*/}"
+if [ $? -ne 0 ]; then
+	echo "The deployment on the k3s device did not get running."
+	RESULT=1
+fi
+wait_deployment_running docker "${DOCKER_DEVICE_ID##*/}"
+if [ $? -ne 0 ]; then
+	echo "The deployment on the docker device did not get running."
+	RESULT=1
+fi
 
 echo "Checking deployment.."
 sudo -E bash wfm-cli.sh list-deployments
+
+# Retry the given command a few times as the app takes a while to start.
+retry_check() {
+	local i
+	for i in $(seq 1 6); do
+		"$@" && return 0
+		sleep 10
+	done
+	return 1
+}
+
+check_k3s_app() {
+	kubectl get pods -A | grep edge-app | grep Running
+}
+
+check_docker_app() {
+	sudo docker ps --filter name=melcoedgeapp --filter status=running | grep melcoedgeapp
+}
+
+echo "Checking the app on the devices.."
+retry_check check_k3s_app
+if [ $? -ne 0 ]; then
+	echo "No running edge-app pod on the k3s device."
+	kubectl get pods -A
+	kubectl describe pods -l app=edge-app
+	kubectl logs -l app=edge-app --all-containers --previous
+	kubectl logs -l app=edge-app --all-containers
+	RESULT=1
+fi
+retry_check check_docker_app
+if [ $? -ne 0 ]; then
+	echo "No running melcoedgeapp container on the docker device."
+	sudo docker ps -a
+	sudo docker logs workload-fleet-management-client
+	RESULT=1
+fi
+
+if [ ${RESULT} -ne 0 ]; then
+	echo "Logs of symphony-api-container ----------------------------------------------------------"
+	sudo docker logs symphony-api-container
+	echo "Failed to verify that edge-app is running."
+	exit 1
+fi
 
 cd ~-
 

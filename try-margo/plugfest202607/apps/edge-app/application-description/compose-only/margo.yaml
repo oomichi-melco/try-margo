@@ -1,0 +1,20 @@
+apiVersion: margo.org/v1-alpha1
+kind: ApplicationDescription
+id: oomichi-melco-edge-app-compose
+metadata:
+  name: edge app compose
+  description: A basic edge app for plugfest (compose only)
+  version: "1.0"
+  catalog:
+    organization:
+      - name: oomichi-melco
+        site: https://github.com/oomichi-melco
+deploymentProfiles:
+  - type: compose
+    id: oomichi-melco-edge-app-compose-a
+    components:
+      - name: edge-app-docker
+        properties:
+          repository: oci://harbor.machine:8443/library/edge-app-compose-archive
+          revision: 1.0.0
+          wait: true
