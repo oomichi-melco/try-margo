@@ -35,8 +35,10 @@ generate_client_svid() {
 
 echo "Prepare certificates for margo client.."
 mkdir -p ~/certs
-cp ~/mis-deployment/certs/https-ca.crt ~/certs/
-cp ~/sandbox/scripts/harbor/certs/harbor.crt ~/certs/
+# ~/mis-deployment/certs is created by root and not readable by the runner user.
+sudo cp ~/mis-deployment/certs/https-ca.crt ~/certs/
+sudo cp ~/sandbox/scripts/harbor/certs/harbor.crt ~/certs/
+sudo chown $(id -u):$(id -g) ~/certs/https-ca.crt ~/certs/harbor.crt
 generate_client_svid helm-identity sandbox-client-k3s
 if [ $? -ne 0 ]; then
 	echo "Failed to generate SVID for k3s client."
