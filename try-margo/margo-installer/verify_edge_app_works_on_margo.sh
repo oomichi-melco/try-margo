@@ -36,10 +36,9 @@ oras push harbor.machine:8443/library/edge-app-helm-app-package:latest \
   margo.yaml:application/vnd.margo.app.description.v1+yaml
 # wfm-cli.sh picks the deployment profile from the first one of the package,
 # so a package having only the compose profile is needed for the docker device.
-cd compose-only
-oras push harbor.machine:8443/library/edge-app-compose-app-package:latest \
+(cd compose-only && oras push harbor.machine:8443/library/edge-app-compose-app-package:latest \
   --artifact-type "application/vnd.margo.app.v1+json" \
-  margo.yaml:application/vnd.margo.app.description.v1+yaml
+  margo.yaml:application/vnd.margo.app.description.v1+yaml)
 set +ex
 cd ~-
 
