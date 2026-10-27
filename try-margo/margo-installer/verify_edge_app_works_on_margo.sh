@@ -30,6 +30,18 @@ cd ~-
 echo "Pushing application package to harbor.."
 set -x
 echo "Harbor12345" | oras login harbor.machine:8443   -u admin --password-stdin
+
+# The compose component is an archive having exactly one top level directory
+# named after the component, which is pushed with the Margo media types.
+STAGING_DIR=$(mktemp -d)
+mkdir ${STAGING_DIR}/edge-app-docker
+cp ../plugfest202607/apps/edge-app/docker-compose/compose.yaml ${STAGING_DIR}/edge-app-docker/
+tar -czf ${STAGING_DIR}/edge-app-compose-archive-1.0.0.tar.gz -C ${STAGING_DIR} edge-app-docker
+(cd ${STAGING_DIR} && oras push harbor.machine:8443/library/edge-app-compose-archive:1.0.0 \
+  --artifact-type "application/vnd.org.margo.component.compose+json" \
+  edge-app-compose-archive-1.0.0.tar.gz:application/vnd.org.margo.component.compose.tar+gzip)
+rm -rf ${STAGING_DIR}
+
 cd ../plugfest202607/apps/edge-app/application-description/
 oras push harbor.machine:8443/library/edge-app-helm-app-package:latest \
   --artifact-type "application/vnd.margo.app.v1+json" \
