@@ -8,7 +8,7 @@ if [ ! -d ./sandbox ]; then
 	cd sandbox
 	git sparse-checkout init --no-cone
 	git sparse-checkout set scripts/*
-	git checkout "${SANDBOX_COMMIT:-a8b4ac90d88991c5842a418960827ff3287b9bce}"
+	git checkout main
 else
 	cd sandbox
 fi
