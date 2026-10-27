@@ -115,11 +115,12 @@ if [ $? -ne 0 ]; then
 fi
 
 # this sleep is necessary for onboarding process.
+# The agent no longer logs "Device onboarded"; "Capabilities reported successfully" marks the onboarding.
 sleep 1m
 
 echo "Checking k3s agent logs.."
 kubectl -n default get deployments
-kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Device onboarded"
+kubectl -n default logs deployment/workload-fleet-management-client-deploy | grep "Capabilities reported successfully"
 if [ $? -ne 0 ]; then
 	kubectl -n default logs deployment/workload-fleet-management-client-deploy
 	echo "Failed to get valid message for k3s device onboarding process."
@@ -134,7 +135,7 @@ if [ $? -ne 0 ]; then
 fi
 
 echo "Checking logs of docker-compose agent.."
-sudo docker logs workload-fleet-management-client 2>&1 | grep 'Device onboarded'
+sudo docker logs workload-fleet-management-client 2>&1 | grep "Capabilities reported successfully"
 if [ $? -ne 0 ]; then
 	echo "Failed to get valid message for docker device onboarding process."
 	exit 1
