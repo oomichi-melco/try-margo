@@ -107,7 +107,9 @@ fi
 echo "K3S_DEVICE_ID   : ${K3S_DEVICE_ID}"
 echo "DOCKER_DEVICE_ID: ${DOCKER_DEVICE_ID}"
 
-# Wait until the deployment on the device ends up in a terminal state.
+# Wait until the deployment on the device gets installed.
+# FAILED is not final: the helm agent sometimes fails the first pull of the chart
+# and recovers on its own a few seconds later, so keep polling until the timeout.
 # $1: label of the device (for messages), $2: the last part of the device ID
 wait_deployment_running() {
 	local label=$1
@@ -122,9 +124,6 @@ wait_deployment_running() {
 		case "${state}" in
 		INSTALLED|RUNNING)
 			return 0
-			;;
-		FAILED)
-			return 1
 			;;
 		esac
 		sleep 10
