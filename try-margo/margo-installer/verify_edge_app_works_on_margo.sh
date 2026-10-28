@@ -135,11 +135,21 @@ wait_deployment_running() {
 # to make it stable
 sleep 10
 
+# Deploy to the devices one by one. Creating both deployments at the same time
+# sometimes ended up with the compose component in the k3s deployment, which the helm
+# agent then failed to pull as a chart.
+RESULT=0
+
 echo "Deploying application on edge (k3s).."
 sudo -E bash wfm-cli.sh deploy-non-interactive ${HELM_PACKAGE_ID} ${K3S_DEVICE_ID}
 if [ $? -ne 0 ]; then
 	echo "Failed to deploy application on k3s device."
 	exit 1
+fi
+wait_deployment_running k3s "${K3S_DEVICE_ID##*/}"
+if [ $? -ne 0 ]; then
+	echo "The deployment on the k3s device did not get running."
+	RESULT=1
 fi
 
 echo "Deploying application on edge (docker).."
@@ -147,14 +157,6 @@ sudo -E bash wfm-cli.sh deploy-non-interactive ${COMPOSE_PACKAGE_ID} ${DOCKER_DE
 if [ $? -ne 0 ]; then
 	echo "Failed to deploy application on docker device."
 	exit 1
-fi
-
-echo "Waiting for deployments to be running.."
-RESULT=0
-wait_deployment_running k3s "${K3S_DEVICE_ID##*/}"
-if [ $? -ne 0 ]; then
-	echo "The deployment on the k3s device did not get running."
-	RESULT=1
 fi
 wait_deployment_running docker "${DOCKER_DEVICE_ID##*/}"
 if [ $? -ne 0 ]; then
